@@ -1,0 +1,21 @@
+--FORMATTING
+COLUMN MemberID FORMAT A12
+COLUMN MemberName FORMAT A40 
+TTITLE CENTER "Report on Members That Has High Frequency of Booking This Year" LEFT 'Page:' FORMAT 999 SQL.PNO SKIP 2
+BREAK ON Frequency SKIP 1
+
+CREATE OR REPLACE VIEW FlightFreqView AS
+SELECT m.MemberID , m.MemberName, count(b.MemberID) as Frequency
+FROM Booking b, member m
+WHERE b.MemberID = m.MemberID
+AND EXTRACT(YEAR FROM b.Booking_Date) = EXTRACT(YEAR FROM SYSDATE)
+GROUP BY m.MemberID , m.MemberName
+HAVING count(b.MemberID) > 2 
+ORDER BY frequency DESC
+WITH READ ONLY CONSTRAINT FlightFreqView;
+
+SELECT * FROM FlightFreqView;
+
+CLEAR COLUMNS
+CLEAR BREAKS
+TTITLE OFF

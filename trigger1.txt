@@ -1,0 +1,73 @@
+CREATE OR REPLACE TRIGGER trg_calcBookPrice 
+AFTER INSERT OR UPDATE ON BookingDetail 
+FOR EACH ROW 
+DECLARE 
+    v_bookTime TIMESTAMP(0);
+    v_seat  NUMBER(6,2);
+    v_purchase NUMBER(10,2);
+    v_insurance NUMBER(10,2);
+    v_promotion NUMBER(4,3);
+    v_total NUMBER(10,2);
+BEGIN 
+    -- Get the seat price
+    BEGIN
+        SELECT Price INTO v_seat
+        FROM Seats
+        WHERE SeatsID = :NEW.SeatsID;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            v_seat := 0;
+    END;
+
+    -- Get the booking time
+    BEGIN
+        SELECT Booking_Date INTO v_bookTime
+        FROM Booking 
+        WHERE BookingID = :NEW.BookingID;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            v_bookTime := NULL;
+    END;
+
+    -- Sum the purchase amounts for the given passenger at the booking time
+    BEGIN
+        SELECT COALESCE(SUM(P.Amount), 0) INTO v_purchase
+        FROM Purchase P
+        WHERE P.PassengerID = :NEW.PassengerID
+        AND P.PurchaseDate = v_bookTime;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            v_purchase := 0;
+    END;
+
+    -- Get the insurance amount
+    BEGIN
+        SELECT amount INTO v_insurance
+        FROM Policy PL, Insurance INS
+        WHERE PL.InsuranceID = INS.InsuranceID
+        AND PL.PolicyID = :NEW.PolicyID;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            v_insurance := 0;
+    END;
+
+    -- Get the promotion discount
+    BEGIN
+        SELECT COALESCE(PM.Discount, 0) INTO v_promotion
+        FROM Promotion PM, Booking B 
+        WHERE PM.PromotionID = B.PromotionID
+        AND B.BookingID = :NEW.BookingID;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            v_promotion := 0;
+    END;
+
+    -- Calculate the total amount
+    v_total := (v_seat + v_purchase + v_insurance) * (1 - v_promotion);
+
+    -- Update the booking amount
+    UPDATE Booking 
+    SET Amount = v_total
+    WHERE BookingID = :NEW.BookingID;
+END;
+/

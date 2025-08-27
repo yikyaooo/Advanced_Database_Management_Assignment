@@ -1,0 +1,41 @@
+CREATE OR REPLACE FUNCTION getDiscount(v_PromotionID  IN VARCHAR) RETURN NUMBER IS
+    v_Discount NUMBER(4,3);
+BEGIN
+    SELECT Discount INTO v_Discount 
+    FROM Promotion 
+    WHERE PromotionID = v_PromotionID;
+    
+    RETURN v_Discount;
+END;    
+/
+
+CREATE OR REPLACE PROCEDURE UpdatePromotionDiscount(v_PromotionID IN VARCHAR, v_NewDiscount IN NUMBER ) IS
+    EMPTY_DATA EXCEPTION;
+    PRAGMA EXCEPTION_INIT(EMPTY_DATA, -20001);
+    v_oldDiscount NUMBER(4,3);
+BEGIN  
+    v_oldDiscount := getDiscount(v_PromotionID);
+
+    IF (v_oldDiscount IS NOT NULL) THEN 
+        UPDATE Promotion
+        SET Discount = v_NewDiscount
+        WHERE PromotionID = v_PromotionID;
+
+        UPDATE Booking
+        SET Amount = (Amount/(1-v_oldDiscount) ) * (1 - v_NewDiscount)
+        WHERE PromotionID = v_PromotionID;
+    ELSE 
+        RAISE EMPTY_DATA;
+    END IF;
+
+    EXCEPTION 
+    WHEN EMPTY_DATA THEN 
+         RAISE_APPLICATION_ERROR(-20001, 'Promotion ' || v_PromotionID|| ' is not found.');
+END;
+/
+
+SELECT PROMOTIONID, DISCOUNT FROM PROMOTION WHERE PROMOTIONID = 'PROMO01';
+SELECT AMOUNT FROM BOOKING WHERE PROMOTIONID = 'PROMO01';
+EXEC UpdatePromotionDiscount('PROMO01', 0.25);
+EXEC UpdatePromotionDiscount('PROMO04', 0.5);
+EXEC UpdatePromotionDiscount('PROMO10', 0.2);

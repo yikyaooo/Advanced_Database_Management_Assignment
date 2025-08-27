@@ -1,0 +1,49 @@
+CREATE OR REPLACE FUNCTION TotalBookingAmount(v_MemberID IN VARCHAR) RETURN NUMBER IS
+    v_TotalAmount NUMBER;
+BEGIN
+    SELECT SUM(Amount) INTO v_TotalAmount
+    FROM Booking
+    WHERE MemberID = v_MemberID;
+    
+    RETURN v_TotalAmount;
+END;    
+/
+
+CREATE OR REPLACE PROCEDURE UpdateMemberTier(v_member  IN VARCHAR) IS
+    v_TotalSpent    NUMBER(10, 2);
+    v_tier VARCHAR(10);
+    EMPTY_DATA EXCEPTION;
+    PRAGMA EXCEPTION_INIT(EMPTY_DATA, -20000);
+BEGIN
+   
+    v_TotalSpent := TotalBookingAmount(v_member);
+
+    IF(v_TotalSpent IS NOT NULL) THEN
+        IF v_TotalSpent >= 2000000 THEN
+            v_tier := 'Platinum';
+        ELSIF v_TotalSpent >= 1500000 THEN
+            v_tier := 'Gold';
+        ELSIF v_TotalSpent >= 1000000 THEN
+            v_tier := 'Silver';
+        ELSE 
+            v_tier := 'Bronze';
+        END IF;
+
+        UPDATE Member
+        SET MemberTier = v_tier
+        WHERE MemberID = v_member;
+
+    ELSE 
+        RAISE EMPTY_DATA;
+    END IF;
+
+    EXCEPTION 
+    WHEN EMPTY_DATA THEN 
+         RAISE_APPLICATION_ERROR(-20000, 'Member ' || v_member|| ' is not found.');
+
+END;
+/
+SELECT * FROM MEMBER WHERE MEMBERID = 'M2400002';
+EXEC UpdateMemberTier('M2400002');
+EXEC UpdateMemberTier('M2400003');
+EXEC UpdateMemberTier('ABC');

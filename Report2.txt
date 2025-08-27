@@ -1,0 +1,80 @@
+CREATE OR REPLACE PROCEDURE prc_bookingReportStaff(v_startDate IN TIMESTAMP, v_endDate IN TIMESTAMP) IS 
+v_grandTotal NUMBER(11,2);
+v_totalValue NUMBER(11,2);
+
+CURSOR StaffCursor IS 
+  SELECT StaffID, StaffName, Gender, Phone, Role
+  FROM Staff;
+
+StaffRec StaffCursor%ROWTYPE;
+
+CURSOR bookingCursor IS
+  SELECT BookingID, Booking_Date, Amount
+  FROM Booking
+  WHERE StaffID = StaffRec.StaffID
+  AND Booking_Date BETWEEN v_startDate AND v_endDate;
+
+bookingRec bookingCursor%ROWTYPE;
+
+BEGIN  
+ v_totalValue := 0;
+ OPEN StaffCursor;
+ LOOP
+ FETCH StaffCursor INTO StaffRec;
+ EXIT WHEN StaffCursor%NOTFOUND;
+
+ --title 
+ DBMS_OUTPUT.PUT_LINE(LPAD('=', 120, '='));
+ DBMS_OUTPUT.PUT_LINE(LPAD('#', 120, '#'));
+ DBMS_OUTPUT.PUT_LINE(LPAD('=', 120, '='));
+ DBMS_OUTPUT.PUT_LINE('Staff ID: ' || StaffRec.StaffID);
+ DBMS_OUTPUT.PUT_LINE('Staff Name: ' || StaffRec.StaffName);
+ DBMS_OUTPUT.PUT_LINE('Gender: ' || StaffRec.Gender);
+ DBMS_OUTPUT.PUT_LINE('Phone: ' || StaffRec.Phone);
+ DBMS_OUTPUT.PUT_LINE('Staff Role: ' || StaffRec.Role);
+ DBMS_OUTPUT.PUT_LINE(LPAD('=', 120, '='));
+
+ --Heading 
+ DBMS_OUTPUT.PUT_LINE(RPAD('Booking ID', 15, ' ') || ' ' || RPAD('Booking Date', 30, ' ') || ' ' || RPAD('   Amount', 15, ' ') );
+ DBMS_OUTPUT.PUT_LINE(LPAD('=', 120, '='));
+
+ --Body 
+ v_grandTotal := 0;
+ OPEN bookingCursor;
+ LOOP
+ FETCH bookingCursor INTO bookingRec;
+ IF (bookingCursor%ROWCOUNT = 0) THEN 
+    DBMS_OUTPUT.PUT_LINE('No such booking: ' || bookingRec.BookingID);
+ END IF;
+ EXIT WHEN bookingCursor%NOTFOUND;
+ v_grandTotal := v_grandTotal + bookingRec.amount;
+ DBMS_OUTPUT.PUT_LINE(RPAD(bookingRec.BookingID, 15, ' ') || ' '|| 
+ RPAD(bookingRec.Booking_Date, 30, ' ') || ' '|| RPAD(TO_CHAR(bookingRec.Amount, '$999,999,999.99'), 15, ' '));
+
+ END LOOP;
+
+ v_totalValue := v_totalValue + v_grandTotal;
+
+
+ --footer 
+ DBMS_OUTPUT.PUT_LINE(LPAD('=', 120, '='));
+ DBMS_OUTPUT.PUT_LINE('Total number of Booking: ' || bookingCursor%ROWCOUNT);
+ DBMS_OUTPUT.PUT_LINE('Grand Total: ' || TO_CHAR(v_grandTotal, '$999,999,999.99'));
+ DBMS_OUTPUT.PUT_LINE(LPAD('=', 120, '='));
+ DBMS_OUTPUT.PUT_LINE(CHR(10));
+
+ CLOSE bookingCursor;
+
+ END LOOP;
+ DBMS_OUTPUT.PUT_LINE(LPAD('=', 120, '='));
+ DBMS_OUTPUT.PUT_LINE('Total Value: ' || TO_CHAR(v_totalValue, '$999,999,999.99'));
+ DBMS_OUTPUT.PUT_LINE('Total number of Staff: ' || StaffCursor%ROWCOUNT);
+
+
+ CLOSE StaffCursor; 
+ DBMS_OUTPUT.PUT_LINE(CHR(10));
+ DBMS_OUTPUT.PUT_LINE(LPAD('=', 54, '=') || RPAD('End Of Report', 66, '='));
+END; 
+/
+
+EXEC prc_bookingReportStaff('2024-01-01 00:00:00', '2024-12-31 00:00:00');

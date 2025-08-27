@@ -1,0 +1,19 @@
+--FORMATTING
+COLUMN MemberID FORMAT A12
+COLUMN MemberName FORMAT A40 
+TTITLE CENTER "Report on Members That Has High Total Spending This Year" LEFT 'Page:' FORMAT 999 SQL.PNO SKIP 2
+
+CREATE OR REPLACE VIEW HighSpendingView AS
+SELECT m.MemberID , m.MemberName, SUM(b.Amount) as Total
+FROM Booking b, member m
+WHERE b.MemberID = m.MemberID
+AND EXTRACT(YEAR FROM b.Booking_Date) = EXTRACT(YEAR FROM SYSDATE)
+GROUP BY m.MemberID , m.MemberName
+HAVING SUM(b.Amount) > 5000
+ORDER BY total DESC
+WITH READ ONLY CONSTRAINT HighSpendingView;
+
+SELECT * FROM HighSpendingView;
+
+CLEAR COLUMNS
+TTITLE OFF

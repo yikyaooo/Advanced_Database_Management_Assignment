@@ -1,0 +1,22 @@
+CREATE OR REPLACE TRIGGER trg_track_Member
+AFTER INSERT OR UPDATE OR DELETE ON Member
+FOR EACH ROW
+BEGIN      	
+ CASE
+  WHEN INSERTING THEN
+    INSERT INTO InsertMember
+    VALUES (:NEW.MemberID, :NEW.MemberName, :NEW.Gender, :NEW.Birthday, :NEW.Email, 
+    :NEW.Phone, :NEW.MemberTier, USER, SYSDATE, TO_CHAR(SYSDATE, 'HH24:MI:SS'));
+  WHEN UPDATING THEN
+    INSERT INTO UpdateMember
+    VALUES (:OLD.MemberID, :OLD.MemberName, :NEW.MemberName, :OLD.Gender, :NEW.Gender, 
+    :OLD.Birthday, :NEW.Birthday, :OLD.Email, :NEW.Email, :OLD.Phone, :NEW.Phone, 
+    :OLD.MemberTier, :NEW.MemberTier, USER, SYSDATE, TO_CHAR(SYSDATE, 'HH24:MI:SS'));
+
+  WHEN DELETING THEN
+    INSERT INTO DeleteMember
+    VALUES (:OLD.MemberID, :OLD.MemberName, :OLD.Gender, :OLD.Birthday, :OLD.Email, 
+    :OLD.Phone, :OLD.MemberTier, USER, SYSDATE, TO_CHAR(SYSDATE, 'HH24:MI:SS'));
+ END CASE;
+END;
+/
